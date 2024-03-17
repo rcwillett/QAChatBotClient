@@ -1,11 +1,11 @@
 import React, { FunctionComponent } from 'react';
 import { Chat } from '../components';
-import { Title } from '@mui/icons-material';
+import { Typography } from '@mui/material';
 
 const ChatPage: FunctionComponent = () => {
     return (
         <div>
-            <Title component="h1">QA Chat Page</Title>
+            <Typography component="h1">QA Chat Page</Typography>
             <Chat />
         </div>
     )

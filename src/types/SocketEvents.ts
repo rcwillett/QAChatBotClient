@@ -1,6 +1,6 @@
 export enum SocketEvents {
     "sendMessage" = "sendMessage",
-    "sendTyping" = "sendTyping",
-    "typing" = "typing",
     "newMessage" = "newMessage",
+    "error" = "error",
+    "connectError" = "connect_error",
 };

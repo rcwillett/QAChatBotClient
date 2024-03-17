@@ -2,10 +2,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { Box, Button, FormControl, FormHelperText, Grid, Paper, TextField, Typography } from "@mui/material";
 import { ChangeEvent, FormEvent, FunctionComponent, useEffect, useRef, useState } from "react";
 import { useChatService } from "../../hooks";
-import { TypingIcon } from "../TypingIcon";
 import { ErrorMessage } from "../ErrorMessage";
-import { Message } from '../../classes';
-import { IUser } from "../../types";
+import { Message, User } from '../../classes';
 import { Loader } from "../Loader";
 
 interface iProps {}
@@ -14,66 +12,53 @@ const resetTitle = () => {
     document.title = 'QA Chat Room';
 };
 
-let typingTimeout: NodeJS.Timeout | undefined;
 let resetTitleTimeout: NodeJS.Timeout | undefined;
 
 const Chat: FunctionComponent<iProps> = () => {
-    const [ tempUser ] = useState<IUser>(() => {
-        const localStorageUser = localStorage.getItem('tempUser');
-        if (localStorageUser) {
-            const localStorageUserJson = JSON.parse(localStorageUser);
-            if (localStorageUserJson.id && localStorageUserJson.name) {
-                return localStorageUserJson;
-            }
-        }
-        const newTempUser = { id: uuidv4(), name: 'User McUser1' };
-        localStorage.setItem('tempUser', JSON.stringify(newTempUser));
+    const [ tempUser ] = useState<User>(() => {
+        const newTempUser = new User(uuidv4(), "User McUser");
         return newTempUser;
     });
 
     const [replyToMessage, setReplyToMessage] = useState<Message>();
     const [message, setMessage] = useState<string>('');
-    const [messageWarning, setMessageWarning] = useState<string>('');
     const [messageError, setMessageError] = useState<string>('');
-    const [otherUserTyping, setOtherUserTyping] = useState<boolean>(false);
-    const otherUserTypingRef = useRef<boolean>(otherUserTyping);
     const [initialLoad, setInitialLoad] = useState<boolean>(true);
     const [loading, setLoading] = useState<boolean>(false);
     const [criticalError, setCriticalError] = useState<boolean>(false);
     const [messages, setMessages] = useState<Message[]>([
-        {
-            id: "initial_message",
-            senderUserId: "SYSTEM",
-            sent: new Date(),
-            content: 'Welcome to the QA chat room! Please be respectful and have fun!',
-        },
+        new Message(uuidv4(), "SYSTEM", new Date(), 'Welcome to the QA chat room! Please be respectful and have fun!')
     ]);
 
-    const messagesRef = useRef<Message[]>(messages);
     const chatWindowRef = useRef<HTMLDivElement>(null);
-    const isTyping = useRef<boolean>(false);
 
-    const handleUserTypingUpdate = async (otherUserTyping: boolean) => {
-        if (otherUserTyping !== otherUserTypingRef.current) {
-            otherUserTypingRef.current = otherUserTyping;
-            setOtherUserTyping(otherUserTyping);
-        }
-    };
-
-    const handleNewMessage = async (newMessage: Message) => {
+    const handleNewMessage = (newMessage: Message) => {
         if (newMessage != null) {
-            const updatedMessages = [...messagesRef.current, newMessage]
-            messagesRef.current = updatedMessages;
-            setMessages(updatedMessages);
+            setMessages((currentMessages) => {
+                const updatedMessages = [...currentMessages, newMessage];
+                if (newMessage.isReplyTo) {
+                    updatedMessages.find((message) => {
+                        if (message.id === newMessage.isReplyTo?.id) {
+                            message.isAnswered = true;
+                            return true;
+                        }
+                    });
+                }
+                return updatedMessages;
+            });
             document.title = 'New Message!';
             clearTimeout(resetTitleTimeout);
             resetTitleTimeout = setTimeout(resetTitle, 5000);
         }
     };
 
-    const { sendMessage: sendMessageToApi, setUserTyping } = useChatService({
+    const handleConnectionError = () => {
+        setCriticalError(true);
+    }
+
+    const { sendMessage: sendMessageToApi } = useChatService({
         messageHandler: handleNewMessage,
-        typingHandler: handleUserTypingUpdate,
+        errorHandler: handleConnectionError
     });
 
     const onInputChange = async (e: ChangeEvent<HTMLInputElement>) => {
@@ -81,18 +66,8 @@ const Chat: FunctionComponent<iProps> = () => {
         setMessage(newMessage);
         if (newMessage.length > 500) {
             setMessageError('Your message is greater than 500 characters. Please reduce it to 500 characters!');
-            setMessageWarning('');
             return;
         }
-        if (!isTyping.current) {
-            isTyping.current = true;
-            setUserTyping({ tempUserId: tempUser?.id || "", isTyping: true });
-        }
-        clearTimeout(typingTimeout);
-        typingTimeout = setTimeout(() => {
-            isTyping.current = false;
-            setUserTyping({ tempUserId: tempUser?.id || "", isTyping: false });
-        }, 3000);
     };
 
     const sendMessage = async (e: FormEvent) => {
@@ -103,30 +78,31 @@ const Chat: FunctionComponent<iProps> = () => {
                 throw new Error('No user account found! Please refresh the page to try again!');
             }
             setLoading(true);
-            isTyping.current = false;
-            clearTimeout(typingTimeout);
-            const newMessage = new Message(uuidv4(), tempUser.id, new Date(), messageToSend, replyToMessage);
+            const newMessage = new Message(uuidv4(), tempUser.id, new Date(), messageToSend, false, replyToMessage);
             await sendMessageToApi(newMessage);
-            const messageWithInfo: Message = {
-                id: uuidv4(),
-                senderUserId: tempUser.id,
-                sent: new Date(),
-                content: messageToSend,
-            };
             setLoading(false);
-            const updatedMessages = [...messagesRef.current, messageWithInfo]
-            messagesRef.current = updatedMessages;
-            setMessages(updatedMessages);
+            setMessages((currentMessages) => {
+                const updatedMessages = [...currentMessages, newMessage];
+                if (newMessage.isReplyTo) {
+                    updatedMessages.find((message) => {
+                        if (message.id === newMessage.isReplyTo?.id) {
+                            message.isAnswered = true;
+                            return true;
+                        }
+                    });
+                }
+                return updatedMessages;
+            
+            });
             setMessage('');
             setMessageError('');
-            setMessageWarning('');
+            setReplyToMessage(undefined);
             window.requestAnimationFrame(() => {
                 const messageInput = document.getElementById('message');
                 messageInput?.focus();
             });
         } catch (error: any) {
             setLoading(false);
-            setMessageWarning('');
             setMessage(messageToSend);
             if (error.message) {
                 setMessageError(error.message);
@@ -146,7 +122,7 @@ const Chat: FunctionComponent<iProps> = () => {
         if (chatWindowRef.current) {
             chatWindowRef.current.scrollTop = chatWindowRef.current.scrollHeight;
         }
-    }, [messages, otherUserTyping]);
+    }, [messages]);
 
     useEffect(() => {
         getChatInitialState();
@@ -188,6 +164,7 @@ const Chat: FunctionComponent<iProps> = () => {
                         id,
                         senderUserId,
                         content,
+                        isAnswered,
                         isReplyTo
                     } = message;
                     if (senderUserId === "SYSTEM") {
@@ -281,31 +258,22 @@ const Chat: FunctionComponent<iProps> = () => {
                                 }
                                 {content}
                             </Paper>
-                            <Button sx={{ alignSelf: 'flex-end' }} variant="text" onClick={() => setReplyToMessage(message)}>
-                                Reply to this
-                            </Button>
+                            {!isAnswered && !isReplyTo && (
+                                <Button sx={{ alignSelf: 'flex-end', textTransform: 'none' }} variant="text" onClick={() => setReplyToMessage(message)}>
+                                    Answer this
+                                </Button>
+                            )}
                         </Grid>
                     );
                 })}
-                {otherUserTyping && (
-                    <Grid justifySelf="flex-start" item xs={8}>
-                        <Paper
-                            sx={{
-                                borderColor: 'primary.main',
-                                borderWidth: '2px',
-                                padding: 1,
-                            }}
-                        >
-                            <TypingIcon />
-                        </Paper>
-                    </Grid>
-                )}
             </Grid>
             <Grid container display="flex" p={1}>
                 {replyToMessage && (
                     <Grid item xs={12}>
                         <Paper
                             sx={{
+                                display: 'flex',
+                                flexDirection: 'column',
                                 backgroundColor: 'primary.light',
                                 color: 'text.main',
                                 borderColor: 'primary.main',
@@ -323,12 +291,12 @@ const Chat: FunctionComponent<iProps> = () => {
                             <Button
                                 sx={{
                                     alignSelf: 'flex-end',
-                                    color: 'text.error',
                                 }}
-                                variant="text"
+                                variant="contained"
+                                color="error"
                                 onClick={() => setReplyToMessage(undefined)}
                             >
-                                Cancel reply
+                                Cancel
                             </Button>
                         </Paper>
                     </Grid>
@@ -353,12 +321,10 @@ const Chat: FunctionComponent<iProps> = () => {
                                 onChange={onInputChange}
                                 autoComplete="off"
                                 sx={{ flexGrow: 1 }}
-                                InputProps={{
-                                    disableUnderline: true,
-                                }}
                                 size="small"
                             />
                             <Button
+                                disabled={Boolean(messageError)}
                                 variant="contained"
                                 color="primary"
                                 type="submit"
@@ -373,13 +339,6 @@ const Chat: FunctionComponent<iProps> = () => {
                         {message.length}/500
                     </Typography>
                 </Grid>
-                {messageWarning && (
-                    <Grid item xs={12}>
-                            <FormHelperText sx={{ color: 'warning.main', textAlign:'center' }}>
-                                {messageWarning}
-                            </FormHelperText>
-                    </Grid>
-                )}
                 {messageError && (
                     <Grid item xs={12} textAlign="center">
                         <FormHelperText sx={{ color: 'error.main', fontWeight: 700, textAlign:'center' }}>
