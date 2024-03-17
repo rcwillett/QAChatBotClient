@@ -1,2 +1,2 @@
-export * from './Chat';
+export * from './SocketEvents';
 export * from './TempUser';

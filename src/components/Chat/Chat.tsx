@@ -4,7 +4,8 @@ import { ChangeEvent, FormEvent, FunctionComponent, useEffect, useRef, useState 
 import { useChatService } from "../../hooks";
 import { TypingIcon } from "../TypingIcon";
 import { ErrorMessage } from "../ErrorMessage";
-import { IMessage, IUser } from "../../types";
+import { Message } from '../../classes';
+import { IUser } from "../../types";
 import { Loader } from "../Loader";
 
 interface iProps {}
@@ -13,8 +14,8 @@ const resetTitle = () => {
     document.title = 'QA Chat Room';
 };
 
-let typingTimeout: number | undefined;
-let resetTitleTimeout: number | undefined;
+let typingTimeout: NodeJS.Timeout | undefined;
+let resetTitleTimeout: NodeJS.Timeout | undefined;
 
 const Chat: FunctionComponent<iProps> = () => {
     const [ tempUser ] = useState<IUser>(() => {
@@ -30,7 +31,7 @@ const Chat: FunctionComponent<iProps> = () => {
         return newTempUser;
     });
 
-    const [replyToMessage, setReplyToMessage] = useState<IMessage | null>(null);
+    const [replyToMessage, setReplyToMessage] = useState<Message>();
     const [message, setMessage] = useState<string>('');
     const [messageWarning, setMessageWarning] = useState<string>('');
     const [messageError, setMessageError] = useState<string>('');
@@ -39,16 +40,16 @@ const Chat: FunctionComponent<iProps> = () => {
     const [initialLoad, setInitialLoad] = useState<boolean>(true);
     const [loading, setLoading] = useState<boolean>(false);
     const [criticalError, setCriticalError] = useState<boolean>(false);
-    const [messages, setMessages] = useState<IMessage[]>([
+    const [messages, setMessages] = useState<Message[]>([
         {
             id: "initial_message",
-            sender_user_id: "SYSTEM",
+            senderUserId: "SYSTEM",
             sent: new Date(),
             content: 'Welcome to the QA chat room! Please be respectful and have fun!',
         },
     ]);
 
-    const messagesRef = useRef<IMessage[]>(messages);
+    const messagesRef = useRef<Message[]>(messages);
     const chatWindowRef = useRef<HTMLDivElement>(null);
     const isTyping = useRef<boolean>(false);
 
@@ -59,9 +60,9 @@ const Chat: FunctionComponent<iProps> = () => {
         }
     };
 
-    const handleNewMessages = async (newMessages: IMessage[]) => {
-        if (newMessages.length > 0) {
-            const updatedMessages = [...messagesRef.current, ...newMessages]
+    const handleNewMessage = async (newMessage: Message) => {
+        if (newMessage != null) {
+            const updatedMessages = [...messagesRef.current, newMessage]
             messagesRef.current = updatedMessages;
             setMessages(updatedMessages);
             document.title = 'New Message!';
@@ -70,8 +71,8 @@ const Chat: FunctionComponent<iProps> = () => {
         }
     };
 
-    const { getChatMessages, sendMessage: sendMessageToApi, setUserTyping } = useChatService({
-        messageHandler: handleNewMessages,
+    const { sendMessage: sendMessageToApi, setUserTyping } = useChatService({
+        messageHandler: handleNewMessage,
         typingHandler: handleUserTypingUpdate,
     });
 
@@ -104,10 +105,11 @@ const Chat: FunctionComponent<iProps> = () => {
             setLoading(true);
             isTyping.current = false;
             clearTimeout(typingTimeout);
-            await sendMessageToApi({ tempUserId: tempUser.id, content: messageToSend });
-            const messageWithInfo: IMessage = {
+            const newMessage = new Message(uuidv4(), tempUser.id, new Date(), messageToSend, replyToMessage);
+            await sendMessageToApi(newMessage);
+            const messageWithInfo: Message = {
                 id: uuidv4(),
-                sender_user_id: tempUser.id,
+                senderUserId: tempUser.id,
                 sent: new Date(),
                 content: messageToSend,
             };
@@ -135,20 +137,9 @@ const Chat: FunctionComponent<iProps> = () => {
     };
 
     const getChatInitialState = async () => {
-        try {
-            const messagesResponse = await getChatMessages();
-            if (!messagesResponse) {
-                throw new Error('Failed to retrieve messages');
-            }
-            document.title = 'Welcome to the QA Chat!';
-            resetTitleTimeout = setTimeout(resetTitle, 5000);
-            const updatedMessages = [...messages, ...messagesResponse];
-            messagesRef.current = updatedMessages;
-            setMessages(updatedMessages);
-            setInitialLoad(false);
-        } catch (error) {
-            setCriticalError(true);
-        }
+        document.title = 'Welcome to the QA Chat!';
+        resetTitleTimeout = setTimeout(resetTitle, 5000);
+        setInitialLoad(false);
     };
 
     useEffect(() => {
@@ -195,11 +186,11 @@ const Chat: FunctionComponent<iProps> = () => {
                 {messages.map((message) => {
                     const {
                         id,
-                        sender_user_id,
+                        senderUserId,
                         content,
                         isReplyTo
                     } = message;
-                    if (sender_user_id === "SYSTEM") {
+                    if (senderUserId === "SYSTEM") {
                         return (
                             <Grid key={id} alignSelf="right" item xs={12}>
                                 <Paper
@@ -219,7 +210,7 @@ const Chat: FunctionComponent<iProps> = () => {
                             </Grid>
                         );
                     }
-                    if (sender_user_id === "CHATBOT") {
+                    if (senderUserId === "CHATBOT") {
                         return (
                             <Grid key={id} justifySelf="flex-start" item xs={8}>
                                 <Paper
@@ -244,7 +235,7 @@ const Chat: FunctionComponent<iProps> = () => {
                             </Grid>
                         );
                     }
-                    if (sender_user_id === tempUser?.id) {
+                    if (senderUserId === tempUser?.id) {
                         return (
                             <Grid key={id} justifySelf="flex-end" item xs={8}>
                                 <Paper
@@ -335,7 +326,7 @@ const Chat: FunctionComponent<iProps> = () => {
                                     color: 'text.error',
                                 }}
                                 variant="text"
-                                onClick={() => setReplyToMessage(null)}
+                                onClick={() => setReplyToMessage(undefined)}
                             >
                                 Cancel reply
                             </Button>

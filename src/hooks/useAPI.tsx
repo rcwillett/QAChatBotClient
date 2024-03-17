@@ -1,13 +1,18 @@
-const baseURL = import.meta.env.APP_API_URL;
+import { io } from 'socket.io-client';
+
+const baseURL = import.meta.env.VITE_APP_API_URL;
 
 const useAPI = () => {
-    const send = async <Output,>(event: string, data?: any) => {
-        // TODO: add ability to accomodate websocket requests
-        return {} as Output;
+    const socket = io(baseURL);
+
+    const send = async (event: string, data?: any) => {
+        return new Promise((resolve) => {
+            socket.emit(event, data, () => resolve(undefined) );
+        });
     };
 
     const addListener = (event: string, callback: (data: any) => void) => {
-        // TODO: add ability to accomodate websocket events receieved
+        socket.on(event, callback);
     };
 
     return {

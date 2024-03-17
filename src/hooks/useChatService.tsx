@@ -1,28 +1,18 @@
-import { IChatStatus, IMessage } from "../types";
+import { SocketEvents } from "../types";
+import { Message } from "../classes";
 import { useAPI } from "./useAPI";
 
 interface IChatServiceInput {
-    messageHandler: (newMessages: IMessage[]) => void;
+    messageHandler: (newMessage: Message) => void;
     typingHandler: (isTyping: boolean) => void;
 };
 
 const useChatService = ({ messageHandler, typingHandler }: IChatServiceInput) => {
     const { send, addListener } = useAPI();
 
-    const getChatMessages = async () => {
-        return send<IMessage[]>('getMessages');
-    };
+    const sendMessage = async (message: Message) => {
 
-    const sendMessage = async ({
-        tempUserId,
-        content,
-        replyToId
-    } : {
-        tempUserId: string;
-        content: string;
-        replyToId?: string;
-    }) => {
-        return send('sendMessage', { tempUserId, content, replyToId });
+        return send(SocketEvents.sendMessage, message);
     };
 
     const setUserTyping = async ({
@@ -33,17 +23,16 @@ const useChatService = ({ messageHandler, typingHandler }: IChatServiceInput) =>
         isTyping: boolean;
     }) => {
         try {
-            return await send('/chat/typing', { tempUserId, isTyping});
+            return await send(SocketEvents.sendTyping, { tempUserId, isTyping});
         } catch (error) {
             // Do nothing this should not cause an error
         }
     };
 
-    addListener('newMessages', messageHandler);
-    addListener('typing', typingHandler);
+    addListener(SocketEvents.newMessage, messageHandler);
+    addListener(SocketEvents.typing, typingHandler);
 
     return {
-        getChatMessages,
         sendMessage,
         setUserTyping,
     };
