@@ -1,7 +1,15 @@
-import { ThemeOptions } from '@mui/material/styles';
+import { ThemeOptions, createTheme } from '@mui/material/styles';
 
-export const themeOptions: ThemeOptions = {
-  palette: {},
+const themeOptions: ThemeOptions = {
+  palette: {
+    mode: 'dark',
+    primary: {
+      main: '#3f51b5',
+    },
+    secondary: {
+      main: '#f50057',
+    },
+  },
   components: {
     MuiInputBase: {
       styleOverrides: {
@@ -19,3 +27,5 @@ export const themeOptions: ThemeOptions = {
     }
   }
 };
+
+export const theme = createTheme(themeOptions);

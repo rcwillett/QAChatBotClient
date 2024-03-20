@@ -1,13 +1,21 @@
 import React, { FunctionComponent } from 'react';
 import { Chat } from '../components';
-import { Typography } from '@mui/material';
+import { Box, Container, Grid, Typography } from '@mui/material';
 
 const ChatPage: FunctionComponent = () => {
     return (
-        <div>
-            <Typography component="h1">QA Chat Page</Typography>
-            <Chat />
-        </div>
+        <Box component="main" sx={{ padding: '80px 0', minHeight: '60vh' }}>
+            <Container>
+                <Grid container justifyContent="center">
+                    <Grid item xs={12} md={8} lg={6}>
+                        <Typography variant="h4" component="h1" align="left" gutterBottom>
+                            Forum
+                        </Typography>
+                        <Chat />
+                    </Grid>
+                </Grid>
+            </Container>
+        </Box>
     )
 };
 
