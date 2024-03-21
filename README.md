@@ -1,2 +1,15 @@
-# QA Chat App Client App
-This is a QA Chat app that will
+# QA Chat Client
+---
+
+## Introduction
+
+This is the client side of a chat room application. After entering a username, users will be able to ask questions and answer other users questions. When used in tandem with the QA Chat Server application, user's answers to other user's questions will be recorded and a chatbot will automatically reply to answered questions.
+
+## Running this App
+In order to run this app you will need Git, Node.js V19.8.1 and npm V9.6.5 or up installed on your machine. After cloning this repo to your local machine, add a .env file with the following content:
+```VITE_APP_API_URL="<Your server base URL Here>"```
+
+Once this is done you can run `npm install` and `npm run dev` to start the application.
+
+## Technical Details
+This app has been built using React.js and Material UI for the framework and component libraries. Socket.io  to implement websockets used for the chat.
