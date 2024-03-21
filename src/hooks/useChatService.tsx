@@ -1,6 +1,6 @@
 import { SocketEvents } from "../types";
 import { Message } from "../classes";
-import { useAPI } from "./useAPI";
+import { useWebSocket } from "./useWebSocket";
 import { useEffect } from "react";
 
 interface IChatServiceInput {
@@ -9,7 +9,7 @@ interface IChatServiceInput {
 };
 
 const useChatService = ({ messageHandler, errorHandler }: IChatServiceInput) => {
-    const { send, addListener, removeListener } = useAPI();
+    const { send, addListener, removeListener } = useWebSocket();
 
     const sendMessage = async (message: Message) => {
         return send(SocketEvents.sendMessage, message);

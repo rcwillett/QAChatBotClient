@@ -1,11 +1,12 @@
 import { v4 as uuidv4 } from 'uuid';
 import { Box, Button, FormControl, FormHelperText, Grid, Paper, TextField, Typography } from "@mui/material";
 import { ChangeEvent, FormEvent, FunctionComponent, useEffect, useRef, useState } from "react";
-import { useChatService } from "../../hooks";
+import { useChatService, useUser } from "../../hooks";
 import { ErrorMessage } from "../ErrorMessage";
-import { Message, User } from '../../classes';
+import { Message } from '../../classes';
 import { Loader } from "../Loader";
 import { Close } from '@mui/icons-material';
+import { ChatMessage } from './ChatMessage';
 
 interface iProps {}
 
@@ -16,10 +17,7 @@ const resetTitle = () => {
 let resetTitleTimeout: NodeJS.Timeout | undefined;
 
 const Chat: FunctionComponent<iProps> = () => {
-    const [ tempUser ] = useState<User>(() => {
-        const newTempUser = new User(uuidv4(), "User McUser");
-        return newTempUser;
-    });
+    const { user } = useUser();
 
     const [replyToMessage, setReplyToMessage] = useState<Message>();
     const [message, setMessage] = useState<string>('');
@@ -27,9 +25,7 @@ const Chat: FunctionComponent<iProps> = () => {
     const [initialLoad, setInitialLoad] = useState<boolean>(true);
     const [loading, setLoading] = useState<boolean>(false);
     const [criticalError, setCriticalError] = useState<boolean>(false);
-    const [messages, setMessages] = useState<Message[]>([
-        new Message(uuidv4(), "SYSTEM", new Date(), 'Welcome to the Forum chat room! Please be respectful and have fun!')
-    ]);
+    const [messages, setMessages] = useState<Message[]>([]);
 
     const chatWindowRef = useRef<HTMLDivElement>(null);
 
@@ -80,11 +76,11 @@ const Chat: FunctionComponent<iProps> = () => {
         e.preventDefault();
         let messageToSend = message;
         try {
-            if (!tempUser) {
+            if (!user) {
                 throw new Error('No user account found! Please refresh the page to try again!');
             }
             setLoading(true);
-            const newMessage = new Message(uuidv4(), tempUser.id, new Date(), messageToSend, false, replyToMessage);
+            const newMessage = new Message(uuidv4(), user.id, user.name, new Date(), messageToSend, false, replyToMessage);
             await sendMessageToApi(newMessage);
             setLoading(false);
             setMessages((currentMessages) => {
@@ -140,7 +136,7 @@ const Chat: FunctionComponent<iProps> = () => {
         getChatInitialState();
     }, [])
 
-    if (criticalError) {
+    if (criticalError || !user) {
         return (
             <Grid container spacing={3} justifyContent="center" flexDirection="column">
                 <Grid item>
@@ -161,157 +157,31 @@ const Chat: FunctionComponent<iProps> = () => {
     }
 
     return (
-        <Box sx={{ border: '1px solid #222', borderRadius: 3, overflow: 'hidden', height: 'auto' }}>
+        <Grid container sx={{ border: '1px solid #222', borderRadius: 3, overflow: 'hidden', height: 'auto' }}>
             <Grid
                 container
+                item
                 display="grid"
                 spacing={2}
-                sx={{ height: '65vh', overflow: 'auto', width: '100%', maxWidth: '100%', alignContent: 'flex-start'}}
+                sx={{ height: '65vh', overflow: 'auto', alignContent: 'flex-start'}}
                 ref={chatWindowRef}
                 mt={0}
                 p={1}
             >
-                {messages.map((message) => {
-                    const {
-                        id,
-                        senderUserId,
-                        content,
-                        isAnswered,
-                        isReplyTo
-                    } = message;
-                    if (senderUserId === "SYSTEM") {
-                        return (
-                            <Grid key={id} alignSelf="right" item xs={12}>
-                                <Paper
-                                    sx={{
-                                        backgroundColor: 'warning.main',
-                                        color: 'text.main',
-                                        borderColor: 'warning.main',
-                                        borderWidth: '2px',
-                                        padding: 1,
-                                        textAlign: 'center',
-                                        fontWeight: 700,
-                                        whiteSpace: 'pre-line', 
-                                    }}
-                                >
-                                    {content}
-                                </Paper>
-                            </Grid>
-                        );
-                    }
-                    if (senderUserId === "CHATBOT") {
-                        return (
-                            <Grid key={id} justifySelf="flex-start" item xs={8}>
-                                <Box sx={{ display: 'inline-flex', width: '100%', justifyContent: 'space-between' }}>
-                                    <Typography sx={{ fontWeight: 700, paddingRight: 1 }}>
-                                        ChatBot
-                                    </Typography>
-                                    {message.sent && (
-                                        <Typography>
-                                            {message.sent.toLocaleTimeString()}
-                                        </Typography>
-                                    
-                                    )}
-                                </Box>
-                                <Paper
-                                    sx={{
-                                        backgroundColor: 'warning.main',
-                                        color: 'text.main',
-                                        borderColor: 'warning.main',
-                                        borderWidth: '2px',
-                                        padding: 1,
-                                        whiteSpace: 'pre-line', 
-                                    }}
-                                >
-                                    {isReplyTo &&
-                                        <>
-                                            <Typography sx={{ fontStyle: 'italic', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} variant="caption">
-                                                Replying To: {isReplyTo.content}
-                                            </Typography>
-                                            <br />
-                                        </>
-                                    }
-                                    {content}
-                                </Paper>
-                            </Grid>
-                        );
-                    }
-                    if (senderUserId === tempUser?.id) {
-                        return (
-                            <Grid key={id} justifySelf="flex-end" item xs={8}>
-                                <Box sx={{ display: 'inline-flex', width: '100%', justifyContent: 'space-between' }}>
-                                    <Typography sx={{ fontWeight: 700, paddingRight: 1 }}>
-                                        {tempUser.name}
-                                    </Typography>
-                                    {message.sent && (
-                                        <Typography>
-                                            {message.sent.toLocaleTimeString()}
-                                        </Typography>
-                                    
-                                    )}
-                                </Box>
-                                <Paper
-                                    sx={{
-                                        backgroundColor: 'primary.main',
-                                        color: '#FFF',
-                                        borderColor: 'primary.main',
-                                        borderWidth: '2px',
-                                        padding: 1,
-                                        whiteSpace: 'pre-line', 
-                                    }}
-                                >
-                                    {isReplyTo &&
-                                        <>
-                                            <Typography sx={{ fontStyle: 'italic', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} variant="caption">
-                                                Replying To: {isReplyTo.content}
-                                            </Typography>
-                                            <br />
-                                        </>
-                                    }
-                                    {content}
-                                </Paper>
-                            </Grid>
-                        );
-                    }
-                    return (
-                        <Grid key={id} justifySelf="flex-start" item xs={8}>
-                            <Box sx={{ display: 'inline-flex', width: '100%', justifyContent: 'space-between' }}>
-                                <Typography sx={{ fontWeight: 700, paddingRight: 1 }}>
-                                    {tempUser.name}
-                                </Typography>
-                                {message.sent && (
-                                    <Typography>
-                                        {message.sent.toLocaleTimeString()}
-                                    </Typography>
-                                
-                                )}
-                            </Box>
-                            <Paper
-                                sx={{
-                                    borderColor: 'primary.main',
-                                    borderWidth: '2px',
-                                    padding: 1,
-                                    whiteSpace: 'pre-line', 
-                                }}
-                            >
-                                {isReplyTo &&
-                                    <>
-                                        <Typography sx={{ fontStyle: 'italic', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} variant="caption">
-                                            Replying To: {isReplyTo.content}
-                                        </Typography>
-                                        <br />
-                                    </>
-                                }
-                                {content}
-                            </Paper>
-                            {!isAnswered && !isReplyTo && (
-                                <Button sx={{ alignSelf: 'flex-end', textTransform: 'none' }} variant="text" onClick={() => handleReplyClick(message)}>
-                                    Answer this
-                                </Button>
-                            )}
-                        </Grid>
-                    );
-                })}
+                <Grid item xs={12}>
+                    <Paper
+                        sx={{
+                            backgroundColor: 'warning.main',
+                            color: 'text.main',
+                            borderColor: 'warning.main',
+                            textAlign: 'center',
+                            fontWeight: 700,
+                        }}
+                    >
+                        Welcome to the Forum chat room! Please be respectful and have fun!
+                    </Paper>
+                </Grid>
+                {messages.map((message) => <ChatMessage key={message.id} message={message} replyClick={handleReplyClick} />)}
             </Grid>
             <Grid container display="flex" p={1}>
                 <Grid item xs={12}>
@@ -399,7 +269,7 @@ const Chat: FunctionComponent<iProps> = () => {
                     </Grid>
                 )}
             </Grid>
-        </Box>
+        </Grid>
     );
 };
 

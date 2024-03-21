@@ -24,7 +24,33 @@ const themeOptions: ThemeOptions = {
           padding: '6.5px 14px',
         },
       },
-    }
+    },
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          textTransform: 'none',
+        },
+        text: {
+          padding: '0px',
+          textTransform: 'none',
+          lineHeight: '1.5',
+          '&:hover': {
+            backgroundColor: 'transparent',
+            textDecoration: 'underline',
+          }
+        }
+      }
+    },
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          borderWidth: '2px',
+          padding: '8px',
+          whiteSpace: 'pre-line', 
+          overflow: 'hidden',
+        },
+      },
+    },
   }
 };
 
