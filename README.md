@@ -5,7 +5,7 @@ This is the client side of a chat room application. After entering a username, u
 
 ## Running this App
 In order to run this app you will need Git, Node.js v20.11.1 and npm V10.2.4 or up installed on your machine. After cloning this repo to your local machine, add a .env file to the root of the folder with the following content:
-```VITE_APP_API_URL="<Your server base URL Here>"```
+```VITE_APP_API_URL="<Your server origin Here>"```
 
 Once this is done, to run in dev mode, go to the root of the folder in a command prompt with node and run `npm install --include=dev` and `npm run dev` to start the application.
 
