@@ -33,7 +33,7 @@ const ChatPage: FunctionComponent = () => {
                             Welcome to Forum Chat
                         </Typography>
                         <Typography textAlign="center" variant="body1" component="p" align="left" pb={3}>
-                            Forum chat is the best place to anonymously ask questions and get answers! Any previously answered questions will be answered by our unique forum chat bot. Enter a username to join the chat!
+                            Forum chat is the best place to anonymously ask questions and get answers! Any previously answered questions will be answered by our Forum chat bot. Enter a username to join the chat!
                         </Typography>
                         <SignUp />
                     </Grid>
