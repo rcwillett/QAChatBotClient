@@ -6,7 +6,7 @@ interface IProps {
 
 const ErrorMessage: FunctionComponent<IProps> = ({ message }) => {
     return (
-        <div>{message || 'Unexpected Error! Please refresh to try again!'}</div>
+        <div data-testid="ErrorMessage">{message || 'Unexpected Error! Please refresh to try again!'}</div>
     );
 };
 

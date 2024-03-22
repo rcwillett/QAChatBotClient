@@ -1,5 +1,5 @@
 import { Box, Typography } from "@mui/material";
-import react, { FunctionComponent } from "react";
+import { FunctionComponent } from "react";
 
 interface IProps {
     username: string;
@@ -9,7 +9,7 @@ interface IProps {
 const MessageInfo: FunctionComponent<IProps> = ({ username, timestamp }) => {
     const infoFontSize = '0.75rem';
     return (
-        <Box sx={{ display: 'inline-flex', width: '100%', justifyContent: 'space-between' }}>
+        <Box sx={{ display: 'inline-flex', width: '100%', justifyContent: 'space-between' }}  data-testid="MessageInfo">
             <Typography sx={{fontSize: infoFontSize, fontWeight: 700, paddingRight: 1 }}>
                 {username}
             </Typography>

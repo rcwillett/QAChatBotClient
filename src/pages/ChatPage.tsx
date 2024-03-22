@@ -1,11 +1,11 @@
-import React, { FunctionComponent, useContext } from 'react';
+import { FunctionComponent, useContext } from 'react';
 import { Chat } from '../components';
 import { Box, Container, Grid, Typography } from '@mui/material';
 import { UserContext } from '../contexts';
 import { SignUp } from '../components/SignUp/SignUp';
 
 const ChatPage: FunctionComponent = () => {
-    const { user, updateUser } = useContext(UserContext);
+    const { user } = useContext(UserContext);
 
     if (user) {
         return (

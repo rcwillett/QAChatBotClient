@@ -11,11 +11,10 @@ const SignUp: FunctionComponent<iProps> = () => {
     const [username, setUsername] = useState<string>('');
     const [error, setError] = useState<string | undefined>(undefined);
 
-    const completeSignUp = async (e: FormEvent) => {
+    const completeSignUp = (e: FormEvent) => {
         e.preventDefault();
         if (!username || username.trim() == '') {
             setError("Please enter a username to continue.");
-
         } else if (username.length >= 20) {
             setError("Please enter a username that is less than 20 characters.");
         } else if (username.toUpperCase() === CHATBOT_NAME.toUpperCase()) {
@@ -29,25 +28,27 @@ const SignUp: FunctionComponent<iProps> = () => {
     };
 
     return (
-        <form onSubmit={completeSignUp}>
+        <form onSubmit={completeSignUp} data-testid="SignUp">
             <Grid container spacing={2}>
                 <Grid item xs={12}>
                     <TextField
                         fullWidth
                         variant="outlined"
                         name="username"
+                        inputProps={{ "aria-label": "username" }}
                         type="text"
                         placeholder="Enter Your Display Name"
+                        role="textbox"
                         error={Boolean(error)}
                         onChange={(e) => setUsername(e.target.value)}
                     />
                 </Grid>
                 <Grid item xs={12}>
-                    <Button fullWidth size="large" variant='contained' type='submit' color='primary' disabled={Boolean(error)}>
+                    <Button fullWidth size="large" variant='contained' type='submit' color='primary' disabled={Boolean(error)} aria-disabled={Boolean(error)}>
                         Enter the Forum!
                     </Button>
                     {error && (
-                        <FormHelperText sx={{ paddingTop: 1, color: 'error.main' }}>
+                        <FormHelperText sx={{ paddingTop: 1, color: 'error.main' }} data-testid="error">
                             {error}
                         </FormHelperText>
                     )}

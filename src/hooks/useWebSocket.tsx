@@ -1,9 +1,10 @@
 import { io } from 'socket.io-client';
+import { API_BASE_URL } from '../constants/ENV';
 
-const baseURL = import.meta.env.VITE_APP_API_URL;
-const socket = io(baseURL);
 
 const useWebSocket = () => {
+    const socket = io(API_BASE_URL);
+
     const send = (event: string, data?: any) => {
         return new Promise((resolve) => {
             socket.emit(event, data, (resp: any) => {
@@ -24,7 +25,7 @@ const useWebSocket = () => {
         send,
         addListener,
         removeListener
-    }
+    };
 };
 
 export { useWebSocket };

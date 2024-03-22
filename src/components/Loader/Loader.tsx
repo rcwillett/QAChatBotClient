@@ -7,7 +7,7 @@ interface IProps {
 
 const Loader: FunctionComponent<IProps> = ({ size }) => {
     return (
-        <CircularProgress size={size} />
+        <CircularProgress data-testid="Loader" size={size} />
     );
 };
 

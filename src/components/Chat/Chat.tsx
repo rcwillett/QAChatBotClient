@@ -1,12 +1,13 @@
 import { v4 as uuidv4 } from 'uuid';
 import { Box, Button, FormControl, FormHelperText, Grid, Paper, TextField, Typography } from "@mui/material";
-import { ChangeEvent, FormEvent, FunctionComponent, useEffect, useRef, useState } from "react";
-import { useChatService, useUser } from "../../hooks";
+import { ChangeEvent, FormEvent, FunctionComponent, useEffect, useMemo, useRef, useState } from "react";
+import { useUser, useWebSocket } from "../../hooks";
 import { ErrorMessage } from "../ErrorMessage";
 import { Message } from '../../classes';
 import { Loader } from "../Loader";
 import { Close } from '@mui/icons-material';
 import { ChatMessage } from './ChatMessage';
+import { SocketEvents } from '../../types';
 
 interface iProps {}
 
@@ -18,6 +19,7 @@ let resetTitleTimeout: NodeJS.Timeout | undefined;
 
 const Chat: FunctionComponent<iProps> = () => {
     const { user } = useUser();
+    const { send, addListener, removeListener } = useMemo(useWebSocket, []);
 
     const [replyToMessage, setReplyToMessage] = useState<Message>();
     const [message, setMessage] = useState<string>('');
@@ -28,6 +30,12 @@ const Chat: FunctionComponent<iProps> = () => {
     const [messages, setMessages] = useState<Message[]>([]);
 
     const chatWindowRef = useRef<HTMLDivElement>(null);
+
+    const handleConnected = () => {
+        setInitialLoad(false);
+        document.title = 'Welcome to Forum Chat!';
+        resetTitleTimeout = setTimeout(resetTitle, 5000);
+    };
 
     const handleNewMessage = (newMessage: Message) => {
         if (newMessage != null) {
@@ -54,12 +62,7 @@ const Chat: FunctionComponent<iProps> = () => {
 
     const handleConnectionError = () => {
         setCriticalError(true);
-    }
-
-    const { sendMessage: sendMessageToApi } = useChatService({
-        messageHandler: handleNewMessage,
-        errorHandler: handleConnectionError
-    });
+    };
 
     const onInputChange = async (e: ChangeEvent<HTMLInputElement>) => {
         let newMessage = e.target.value;
@@ -81,7 +84,7 @@ const Chat: FunctionComponent<iProps> = () => {
             }
             setLoading(true);
             const newMessage = new Message(uuidv4(), user.id, user.name, new Date(), messageToSend, false, replyToMessage);
-            await sendMessageToApi(newMessage);
+            await send(SocketEvents.sendMessage, newMessage);
             setLoading(false);
             setMessages((currentMessages) => {
                 const updatedMessages = [...currentMessages, newMessage];
@@ -114,12 +117,6 @@ const Chat: FunctionComponent<iProps> = () => {
         }
     };
 
-    const getChatInitialState = async () => {
-        document.title = 'Welcome to Forum Chat!';
-        resetTitleTimeout = setTimeout(resetTitle, 5000);
-        setInitialLoad(false);
-    };
-
     const handleReplyClick = (message: Message) => {
         setReplyToMessage(message);
         const messageInput = document.getElementById('message');
@@ -133,12 +130,22 @@ const Chat: FunctionComponent<iProps> = () => {
     }, [messages]);
 
     useEffect(() => {
-        getChatInitialState();
-    }, [])
+        addListener(SocketEvents.connect, handleConnected);
+        addListener(SocketEvents.newMessage, handleNewMessage);
+        addListener(SocketEvents.error, handleConnectionError);
+        addListener(SocketEvents.connectError, handleConnectionError);
+
+        return () => {
+            removeListener(SocketEvents.connect, handleConnected);
+            removeListener(SocketEvents.newMessage, handleNewMessage);
+            removeListener(SocketEvents.error, handleConnectionError);
+            removeListener(SocketEvents.connectError, handleConnectionError);
+        };
+    }, []);
 
     if (criticalError || !user) {
         return (
-            <Grid container spacing={3} justifyContent="center" flexDirection="column">
+            <Grid container spacing={3} justifyContent="center" flexDirection="column" data-testid="critical-error">
                 <Grid item>
                     <ErrorMessage message="There was a critical error. Please refresh the page to try entering the chat again." />
                 </Grid>
@@ -157,7 +164,7 @@ const Chat: FunctionComponent<iProps> = () => {
     }
 
     return (
-        <Grid container sx={{ border: '1px solid #222', borderRadius: 3, overflow: 'hidden', height: 'auto' }}>
+        <Grid container sx={{ border: '1px solid #222', borderRadius: 3, overflow: 'hidden', height: 'auto' }} data-testid="chat-window">
             <Grid
                 container
                 item
@@ -168,7 +175,7 @@ const Chat: FunctionComponent<iProps> = () => {
                 mt={0}
                 p={1}
             >
-                <Grid item xs={12}>
+                <Grid item xs={12} data-testid="chat-welcome">
                     <Paper
                         sx={{
                             backgroundColor: 'warning.main',
@@ -237,8 +244,10 @@ const Chat: FunctionComponent<iProps> = () => {
                                 id="message"
                                 variant="outlined"
                                 name="message"
+                                inputProps={{ "aria-label": "message" }}
                                 value={message}
                                 disabled={loading}
+                                role="textbox"
                                 onChange={onInputChange}
                                 autoComplete="off"
                                 sx={{ flexGrow: 1, marginRight: 0.5 }}
@@ -247,9 +256,11 @@ const Chat: FunctionComponent<iProps> = () => {
                             />
                             <Button
                                 disabled={Boolean(messageError)}
+                                aria-disabled={Boolean(messageError)}
                                 variant="contained"
                                 color="primary"
                                 type="submit"
+                                data-testid="submit-button"
                             >
                                 Send
                             </Button>
@@ -262,11 +273,14 @@ const Chat: FunctionComponent<iProps> = () => {
                     </Typography>
                 </Grid>
                 {messageError && (
-                    <Grid item xs={12} textAlign="center">
+                    <Grid item xs={12} textAlign="center" data-testid="message-error">
                         <FormHelperText sx={{ color: 'error.main', fontWeight: 700, textAlign:'center' }}>
                             {messageError}
                         </FormHelperText>
                     </Grid>
+                )}
+                {loading && (
+                    <Box sx={{display: "none"}} data-testid="loading-indicator" />
                 )}
             </Grid>
         </Grid>

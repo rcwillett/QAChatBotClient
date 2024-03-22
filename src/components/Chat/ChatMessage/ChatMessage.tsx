@@ -1,4 +1,4 @@
-import React, { FunctionComponent } from 'react';
+import { FunctionComponent } from 'react';
 import { Message } from '../../../classes';
 import { useUser } from '../../../hooks';
 import { Box, Button, Grid, Paper, SxProps, Typography } from "@mui/material";
@@ -57,7 +57,7 @@ const ChatMessage: FunctionComponent<IProps> = ({
     }
 
     return (
-        <Grid justifySelf={messageJustification} item xs={8}>
+        <Grid justifySelf={messageJustification} item xs={8} data-testid="ChatMessage">
             <MessageInfo username={senderUsername} timestamp={message.sent} />
             <Paper
                 sx={messagePaperStyles}
